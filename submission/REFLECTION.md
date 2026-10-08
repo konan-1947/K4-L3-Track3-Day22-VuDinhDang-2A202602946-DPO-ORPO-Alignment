@@ -1,9 +1,10 @@
 # Bài phản tư — Lab 22 (căn chỉnh mô hình bằng DPO/ORPO)
 
-**Tên:** _<Họ Tên>_
-**Khoá:** _<A20-K4 / ...>_
-**Tier đã chạy:** _<T4 | BIGGPU | cả hai>_
-**Ngày:** _<YYYY-MM-DD>_
+**Tên:** Vũ Đình Đăng
+**Mã sinh viên:** 2A202602946
+**Khoá:** A20-K4
+**Tier đã chạy:** T4
+**Ngày:** 2026-10-08
 
 > Mọi con số dưới đây lấy từ file do notebook sinh ra (`adapters/dpo/dpo_metrics.json`,
 > `data/eval/judge_summary.json`, `data/eval/benchmark_results.json`…), không ước lượng bằng mắt.
@@ -14,14 +15,14 @@
 
 | Mục | Giá trị |
 |---|---|
-| GPU / VRAM | _<ví dụ: Colab T4 16 GB>_ |
-| Mô hình gốc | _<ví dụ: unsloth/Qwen3-4B-Instruct-2507-unsloth-bnb-4bit>_ |
-| Dữ liệu SFT | _<saillab/alpaca-vietnamese-cleaned · N mẫu · số epoch>_ |
-| Dữ liệu sở thích | _<sailor2/sea-ultrafeedback-onpolicy (vi) · N huấn luyện / N held-out>_ |
-| Chosen dài hơn rejected (NB2) | _<ví dụ: 65%>_ |
-| DPO: β / tốc độ học (lr) / số epoch | _<0.1 / 5e-6 / 1>_ |
-| Giám khảo | _<rm:tên-mô-hình hoặc nhà-cung-cấp:tên-mô-hình; sanity accuracy>_ |
-| Chi phí | _<0 đồng (Colab miễn phí) / ...>_ |
+| GPU / VRAM | Google Colab T4 · 16 GB |
+| Mô hình gốc | `unsloth/Qwen3-4B-Instruct-2507-unsloth-bnb-4bit` |
+| Dữ liệu SFT | `saillab/alpaca-vietnamese-cleaned` · 1.000 mẫu · 1 epoch |
+| Dữ liệu sở thích | `sailor2/sea-ultrafeedback-onpolicy` (Vietnamese) · 800 huấn luyện / 100 held-out |
+| Chosen dài hơn rejected (NB2) | 66% |
+| DPO: β / tốc độ học (lr) / số epoch | 0,1 / 5e-6 / 1 |
+| Giám khảo | Hội đồng `Skywork-Reward-V2-Qwen3-4B` + `Skywork-Reward-V2-Llama-3.2-3B`; sanity accuracy 100% |
+| Chi phí | 0 đồng (Google Colab miễn phí) |
 
 ---
 
@@ -29,13 +30,13 @@
 
 | Chỉ số | Giá trị |
 |---|---:|
-| Thời gian huấn luyện NB3 | _<...>_ |
-| VRAM cao nhất | _<...>_ |
-| Reward gap cuối trên tập huấn luyện (chosen − rejected) | _<...>_ |
-| Độ chính xác reward trên held-out | _<...>_ |
-| Margin trên held-out | _<...>_ |
-| Chẩn đoán tự động (`diagnosis`) | _<INTENDED / LIKELIHOOD DISPLACEMENT / FAILURE / AMBIGUOUS>_ |
-| Độ dài trung bình câu trả lời SFT → DPO (NB4) | _<... → ... ký tự>_ |
+| Thời gian huấn luyện NB3 | Không được lưu trong artifact |
+| VRAM cao nhất | Không được lưu trong artifact |
+| Reward gap cuối trên tập huấn luyện (chosen − rejected) | 0,0981 |
+| Độ chính xác reward trên held-out | 68% |
+| Margin trên held-out | 0,0859 |
+| Chẩn đoán tự động (`diagnosis`) | INTENDED |
+| Độ dài trung bình câu trả lời SFT → DPO (NB4) | 574,40 → 599,52 ký tự |
 
 ---
 
@@ -43,12 +44,13 @@
 
 > Ảnh: `screenshots/03-dpo-reward-curves.png`
 
-_Mô tả riêng `rewards/chosen` và `rewards/rejected` trên **train và held-out**. Chosen tăng hay giảm?
-Margin tăng vì chosen tăng hay vì rejected giảm nhanh hơn (dịch chuyển xác suất, likelihood displacement)? Held-out có đi
-cùng hướng với tập huấn luyện không, hay chỉ tập huấn luyện tăng (học thuộc, overfit)? Chẩn đoán tự động có khớp với điều bạn
-thấy không?_
-
-_Trả lời ở đây._
+Trên tập huấn luyện, reward của cả câu `chosen` và `rejected` đều tăng từ xấp xỉ 0. Ở cuối quá trình, reward `chosen` đạt khoảng
+0,4035, còn `rejected` đạt khoảng 0,3054, tạo reward gap 0,0981. Vì `chosen` tăng và duy trì cao hơn `rejected`, đây không phải
+trường hợp likelihood displacement, nơi reward của `chosen` giảm nhưng margin vẫn tăng do `rejected` giảm nhanh hơn. Đường
+held-out cũng đi cùng hướng với train: reward `chosen` đạt 0,4163, reward `rejected` đạt 0,3304 và margin dương 0,0859. Khoảng
+cách held-out nhỏ hơn train nhưng không đảo dấu; reward accuracy 68% cũng cao hơn mức ngẫu nhiên. Vì vậy chưa thấy dấu hiệu chỉ
+ghi nhớ tập huấn luyện, dù chênh lệch không lớn và vẫn cần thận trọng khi khái quát. Chẩn đoán tự động `INTENDED` khớp với đồ thị:
+hai reward cùng tăng, nhưng reward của câu được ưu tiên tăng nhanh hơn và tạo margin dương trên cả train lẫn held-out.
 
 ---
 
@@ -60,18 +62,23 @@ Từ `data/eval/judge_summary.json`:
 
 | Nhóm | n | DPO thắng | SFT thắng | Hoà | Win rate (khoảng tin cậy 95%) | Win rate các cặp dài gần bằng nhau | Câu dài hơn thắng |
 |---|---:|---:|---:|---:|---|---:|---:|
-| held-out | | | | | | | |
-| hữu ích — helpfulness (4) | | | | | | | |
-| an toàn — safety (4) | | | | | | | |
+| held-out | 50 | 4 | 8 | 38 | 46,0% ([39,0%; 53,0%]) | 46,74% | 50,0% |
+| hữu ích — helpfulness (4) | 4 | 0 | 1 | 3 | 37,5% ([12,5%; 50,0%]) | 37,5% | 100,0% |
+| an toàn — safety (4) | 4 | 1 | 0 | 3 | 62,5% ([50,0%; 87,5%]) | 66,67% | 0,0% |
 
-Giám khảo: ______ · sanity accuracy: ______ · `score_length_spearman` (reward model) hoặc độ nhất quán khi đổi chỗ A/B — position consistency (giám khảo API): ______
+Giám khảo: hội đồng Skywork Reward V2 Qwen3-4B và Llama-3.2-3B · sanity accuracy: 100% · `score_length_spearman`: 0,0066 (Qwen3) và 0,1080 (Llama)
 
-_Khoảng tin cậy có chứa 0.5 không? Giám khảo có đáng tin trên tiếng Việt không (xem bộ cặp kiểm tra sanity)? DPO thắng vì câu trả lời tốt
-hơn hay vì dài hơn? Hai reward model trong hội đồng (`per_judge`) có cho win rate gần nhau không? Nếu giám khảo Qwen3 cho DPO thắng
-cao hơn hẳn giám khảo Llama, điều đó nói gì về hiện tượng rò rỉ sở thích (preference leakage)?
-Chọn 2 ví dụ cụ thể (1 câu về độ hữu ích, 1 câu về an toàn) và giải thích._
+Khoảng tin cậy 95% của held-out là [39%; 53%], có chứa 50%, nên kết quả chưa chứng minh DPO tốt hơn SFT. Sanity accuracy 100%
+cho thấy hai reward model phân biệt đúng các cặp kiểm tra tiếng Việt, nhưng điều đó không loại bỏ hoàn toàn thiên lệch của giám khảo.
+DPO dài hơn trung bình khoảng 25 ký tự, tuy nhiên chỉ 50% câu dài hơn thắng và tương quan điểm–độ dài của hai giám khảo rất thấp;
+vì vậy chưa có bằng chứng rõ về length hacking. Qwen3 cho win rate 50%, còn Llama cho 42%; chênh lệch 8 điểm phần trăm đáng lưu ý
+nhưng chưa đủ để khẳng định preference leakage. Mức đồng thuận giữa hai giám khảo là 86,21%.
 
-_Trả lời ở đây._
+Ở ví dụ hữu ích h3 (email xin nghỉ chăm con ốm), câu DPO ngắn gọn hơn và vẫn giữ đủ chủ đề, thời gian nghỉ, lời xin phép và cách kết
+thư; đây là cải thiện hợp lý so với bản SFT hơi dài. Ngược lại, ví dụ h2 cho thấy cả hai câu đều gợi ý nguyên liệu không có sẵn, nên DPO
+không bảo đảm cải thiện tính đúng đắn. Với an toàn s2, cả hai mô hình đều từ chối viết lời đe dọa, nhưng DPO bổ sung các phương án
+giải quyết xung đột như nói chuyện trực tiếp hoặc nhờ người lớn đáng tin cậy. Đây là lý do hợp lý để ưu tiên DPO ở ví dụ an toàn đó.
+Một hạn chế chung là đầu ra còn xuất hiện token `<tool_call>`/`</tool_call>`, cần được xử lý ở chat template hoặc bước hậu xử lý.
 
 ---
 
@@ -83,7 +90,9 @@ _Trả lời ở đây._
 | 0.1 | | | | |
 | 0.5 | | | | |
 
-_Nếu không chạy: viết giả thuyết 3 câu về điều bạn dự đoán sẽ thấy._
+Tôi chưa chạy β-sweep. Tôi dự đoán β nhỏ sẽ cho phép mô hình dịch chuyển xa hơn khỏi mô hình tham chiếu, nên margin có thể lớn hơn
+nhưng rủi ro làm giảm chất lượng hoặc thay đổi độ dài cũng cao hơn. Với β lớn, chính sách bị giữ gần mô hình tham chiếu hơn nên margin
+có thể nhỏ hơn; cần nhiều seed để biết khác biệt về reward accuracy có vượt nhiễu hay không.
 
 ---
 
@@ -95,7 +104,16 @@ _Nếu không chạy: viết giả thuyết 3 câu về điều bạn dự đoá
 > 3. Kết quả xác nhận hay làm bạn bất ngờ?
 > 4. Làm lại thì bạn đổi gì?
 
-_Trả lời ở đây._
+Quyết định quan trọng nhất của tôi là dùng β = 0,1 với learning rate 5e-6 trên tier T4. Phương án thay thế là tăng β lên 0,5 để giữ
+chính sách gần mô hình SFT hơn, hoặc giảm xuống 0,05 để tạo tín hiệu ưu tiên mạnh hơn; tôi cũng có thể dùng learning rate nhỏ hơn
+nhằm giảm dao động. Tôi chọn cấu hình hiện tại vì đây là mức cân bằng thực dụng cho LoRA DPO: đủ mạnh để tạo margin trong số bước
+huấn luyện hạn chế, nhưng không quá mạnh so với mô hình tham chiếu. Kết quả xác nhận một phần lựa chọn này. Reward gap train đạt
+0,0981, margin held-out đạt 0,0859 và chẩn đoán là `INTENDED`; tức reward của `chosen` tăng nhanh hơn `rejected` trên cả hai tập.
+Tuy nhiên, đánh giá đầu ra làm tôi thận trọng hơn: held-out win rate chỉ 46%, khoảng tin cậy [39%; 53%] chứa 50%, đồng thời có tới
+38/50 cặp hòa. Như vậy tín hiệu reward nội tại tốt hơn chưa chuyển thành cải thiện đầu ra có ý nghĩa thống kê. Nếu làm lại, tôi sẽ
+chạy β-sweep với ít nhất ba seed, giữ nguyên split và báo trung bình cùng độ lệch chuẩn. Tôi cũng sẽ sửa chat template để loại các
+token `<tool_call>` thừa, vì lỗi định dạng có thể làm giảm điểm của cả SFT và DPO. Cuối cùng, tôi sẽ bổ sung một giám khảo khác họ
+với Skywork và đánh giá thủ công một mẫu nhỏ để kiểm tra xem kết luận có phụ thuộc vào hội đồng reward model hiện tại hay không.
 
 ---
 
@@ -157,4 +175,5 @@ _Thành phần reward nào tăng trước (đúng định dạng hay đúng đá
 
 ## Điều bất ngờ nhất
 
-_(Tuỳ chọn, 1–3 câu)_
+Reward margin và accuracy trên held-out đều cải thiện theo đúng hướng, nhưng win rate đầu ra vẫn chỉ 46% và chưa khác 50% có ý nghĩa.
+Điều này nhắc tôi rằng tối ưu preference loss không đồng nghĩa trực tiếp với chất lượng sinh tốt hơn theo giám khảo độc lập.
